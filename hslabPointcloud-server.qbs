@@ -21,6 +21,10 @@ Project{
 
         of.addons: [
             'ofxRealsense',
+            'ofxRange',
+            'ofxHistoryPlot',
+            'ofxSnappy',
+            /* 'ofxSparklines', */
             'ofxAsio-0.9.8' //,
         ]
 

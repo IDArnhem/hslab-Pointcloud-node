@@ -6,8 +6,11 @@ void ofApp::setup() {
     ofSetVerticalSync(true);
     ofSetLogLevel(OF_LOG_NOTICE);
 
+    initPlots();
+
     acquiring = false;
 
+    // initialize realsense camera stuff
     rs2::context ctx;
     std::vector<rs2::pipeline>  pipelines;
 
@@ -27,6 +30,16 @@ void ofApp::setup() {
     } else {
         ofLogWarning() << "No RealSense cameras were found! make sure you have one plugged in";
     }
+}
+
+void ofApp::initPlots() {
+    plotCooking = new ofxHistoryPlot( NULL, "cooking time", 200, false);
+    plotCooking->setRange(0, 500);
+    plotCooking->setColor( ofColor(255,255,0) );
+    plotCooking->setShowNumericalInfo(true);
+    plotCooking->setRespectBorders(true);
+    plotCooking->setLineWidth(2);
+    plotCooking->setBackgroundColor(ofColor(0,0,0,128));
 }
 
 // ////////////////////////////////////////////////////////////////
@@ -62,7 +75,36 @@ void ofApp::pcDispatch() {
     cout << endl;
 }
 
+void ofApp::buildMesh(ofxHslabPointcloud &cloud) {
+    mesh.clear();
+    if(cloud.pcdata.count !=0 ){
+        const float *vs = cloud.pcdata.vertices;
+        for(int i = 0; i < cloud.pcdata.count; i++){
+            if(vs[i+2]){
+                int x = static_cast<int>(cloud.pcdata.texture[i] * cloud.pcdata.width);
+                int y = static_cast<int>(cloud.pcdata.texture[i+1] * cloud.pcdata.height);
+
+                if (y < 0 || y >= cloud.pcdata.height) { continue; }
+                if (x < 0 || x >= cloud.pcdata.width) { continue; }
+                int cloc = (y * cloud.pcdata.width + x) * 3;
+
+                //const rs2::vertex v = vs[i];
+                glm::vec3 v3(vs[i*3],vs[(i*3)+1],vs[(i*3)+2]);
+                mesh.addVertex(v3);
+
+                unsigned char r = cloud.pcdata.color[i*3];
+                unsigned char g = cloud.pcdata.color[(i*3) + 1];
+                unsigned char b = cloud.pcdata.color[(i*3) + 2];
+
+                mesh.addColor(ofColor(r, g, b));
+            } // if
+        } // for
+    } // if
+}
+
 void ofApp::pcAcquire() {
+    ofResetElapsedTimeCounter();
+
     // Get depth data from camera
     auto frames = pipe.wait_for_frames();
     auto color = frames.get_color_frame();
@@ -72,68 +114,13 @@ void ofApp::pcAcquire() {
     pc.map_to(color);
     points = pc.calculate(depth);
 
-    int width = color.get_width();
-    int height = color.get_height();
-
     auto pcver = points.get_vertices();              // get vertices
     auto pctex = points.get_texture_coordinates();
     const unsigned char* pccolor = static_cast<const unsigned char*>(color.get_data());
-
-    // int colorLocation = (y * width + x) * 3;
-    // unsigned char color[3] = {colorData[colorLocation], colorData[colorLocation +1], colorData[colorLocation +2]}; // RGB
-/*
-    for (int i = 0; i < points.size(); i++) {
-        int x = static_cast<int>(pctex[i].u * width);
-        int y = static_cast<int>(pctex[i].v * height);
-
-        if (y < 0 || y >= height) { continue; }
-        if (x < 0 || x >= width) { continue; }
-
-//        if (pcver[i].z <= 0 || pcver[i].z > maxAcceptDistance) {
-//            // filter out values further than this value
-//            continue;
-//        }
-
-        int cloc = (y * width + x) * 3;
-        unsigned char color[3] = {color[cloc], color[cloc+1], color[cloc+2]};
-
-        float coordinates[3] = { pcver[i].x, pcver[i].y, pcver[i].z };
-    }
-*/
-
-    /*
-    auto pcver = points.get_vertices();              // get vertices
-    auto pctex = points.get_texture_coordinates();
-    const unsigned char* pccolor = static_cast<const unsigned char*>(color.get_data());
-    for (int i = 0; i < rs_points.size(); i++) {
-        int x = static_cast<int>(textureCoordinates[i].u * width);
-        int y = static_cast<int>(textureCoordinates[i].v * height);
-        int colorLocation = y * color_intrinsic.width + x;
-        float px = rs_vertices[i].x;
-        float py = rs_vertices[i].y;
-        float pz = rs_vertices[i].z;
-        unsigned char r = colorData[colorLoation];
-        unsigned char g = colorData[colorLocation + 1];
-        unsigned char b = colorData[colorLocation + 2];
-        save(px, py, pz, r, g, b);
-    }
-    */
-
-    /*
-    auto vertices = points.get_vertices();              // get vertices
-    auto tex_coords = points.get_texture_coordinates(); // and texture coordinates
-    for (int i = 0; i < points.size(); i++)
-    {
-        if (vertices[i].z)
-        {
-            // upload the point and texture coordinates only for points we have depth data for
-            glVertex3fv(vertices[i]);
-            glTexCoord2fv(tex_coords[i]);
-        }
-    }
-    */
     unsigned long n = points.size();
 
+    // ----------------------------------------------------------------
+    // create intermediate data structure
     pcloud.pcdata.width = color.get_width();
     pcloud.pcdata.height = color.get_height();
 
@@ -143,34 +130,13 @@ void ofApp::pcAcquire() {
     std::memcpy(pcloud.pcdata.color, pccolor, 3*n*sizeof(unsigned char));
     std::memcpy(pcloud.pcdata.vertices, pcver, 3*n*sizeof(float));
     std::memcpy(pcloud.pcdata.texture, pctex, 2*n*sizeof(float));
+    // ----------------------------------------------------------------
 
-    mesh.clear();
-    if(pcloud.pcdata.count !=0 ){
-        const float *vs = pcloud.pcdata.vertices;
-        for(int i = 0; i < pcloud.pcdata.count; i++){
-            if(vs[i+2]){
-                int x = static_cast<int>(pcloud.pcdata.texture[i] * pcloud.pcdata.width);
-                int y = static_cast<int>(pcloud.pcdata.texture[i+1] * pcloud.pcdata.height);
+    buildMesh( pcloud );
+/*
+    int width = color.get_width();
+    int height = color.get_height();
 
-                if (y < 0 || y >= pcloud.pcdata.height) { continue; }
-                if (x < 0 || x >= pcloud.pcdata.width) { continue; }
-                int cloc = (y * pcloud.pcdata.width + x) * 3;
-
-                //const rs2::vertex v = vs[i];
-                glm::vec3 v3(vs[i*3],vs[(i*3)+1],vs[(i*3)+2]);
-                mesh.addVertex(v3);
-
-                unsigned char r = pcloud.pcdata.color[i*3];
-                unsigned char g = pcloud.pcdata.color[(i*3) + 1];
-                unsigned char b = pcloud.pcdata.color[(i*3) + 2];
-
-                mesh.addColor(ofColor(r, g, b));
-                            //ofFloatColor(0,0,ofMap(v.z, 2, 6, 1, 0), 0.8));
-            } // if
-        } // for
-    } // if
-
-    /*
     // Create oF mesh
     mesh.clear();
     if(n!=0){
@@ -197,7 +163,18 @@ void ofApp::pcAcquire() {
             } // if
         } // for
     } // if
-    */
+*/
+
+    long ns = ofGetElapsedTimeMillis();
+    //ofLogNotice() << "Cooking time in millis " << ns;
+    plotCooking->update( ns );
+    /*
+     * With buffer copies and mesh conversion:
+     * Cooking time in millis 65
+     *
+     * Using the RS data structures straight-up, no copies:
+     * Cooking time in millis 50
+     */
 }
 
 // ////////////////////////////////////////////////////////////////
@@ -220,5 +197,8 @@ void ofApp::draw() {
     mesh.drawVertices();
 
     cam.end();
+
+    plotCooking->draw(10, 10, 240, 100);
+//    plotBufferSize->draw(10, 110, 240, 100);
 }
 
