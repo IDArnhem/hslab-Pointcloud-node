@@ -5,6 +5,7 @@
 #include "ofxHistoryPlot.h"
 #include "ofxhslabpointcloud.h"
 #include "ofxRealsense.h"
+#include "snappy.h"
 
 class ofApp : public ofBaseApp {
 public:
@@ -17,6 +18,7 @@ public:
     // point cloud functionalities
     void pcAcquire();
     void pcDispatch();
+    void pcCompress();
 
     void buildMesh(ofxHslabPointcloud &cloud);
 
@@ -40,7 +42,7 @@ private:
     shared_ptr<ofxAsio::UDP::Server> receiver;
 
     ofxHistoryPlot *plotCooking;
-    ofxHistoryPlot *plotBufferSize;
+    ofxHistoryPlot *plotRatio;
 
     ofMutex lock;
 };

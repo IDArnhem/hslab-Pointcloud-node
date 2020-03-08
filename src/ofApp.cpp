@@ -1,5 +1,9 @@
 #include "ofApp.h"
 
+//int framecfg[3] = {1280, 720, 30}; // width, height, fps
+//int framecfg[3] = {640, 480, 30}; // width, height, fps
+int framecfg[3] = {640, 360, 30}; // width, height, fps
+
 // ////////////////////////////////////////////////////////////////
 void ofApp::setup() {
     ofSetFrameRate(30);
@@ -19,6 +23,17 @@ void ofApp::setup() {
         rs2::config cfg;
         ofLogNotice() << "RealSense device found with ID " << dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
         cfg.enable_device( dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER) );
+
+        /// configure color stream
+        cfg.enable_stream(RS2_STREAM_COLOR, framecfg[0], framecfg[1], RS2_FORMAT_BGR8, framecfg[2]);
+        /// configure depth image stream: resolution 640*480, image format: Z16, frame rate: 30 frames/second
+        cfg.enable_stream(RS2_STREAM_DEPTH, framecfg[0], framecfg[1], RS2_FORMAT_Z16, framecfg[2]);
+
+        // set window title to match camera stream configuration
+        std::stringstream ss;
+        ss << framecfg[0] << "x" << framecfg[1] << " @ " << framecfg[2] << " fps ";
+        ofSetWindowTitle(ss.str());
+
         acquiring = true; // seems like we have a data source
         pipe.start( cfg ); // open it
         pipelines.push_back(pipe); // keep track of this pipeline
@@ -33,6 +48,7 @@ void ofApp::setup() {
 }
 
 void ofApp::initPlots() {
+    // frame cooking times
     plotCooking = new ofxHistoryPlot( NULL, "cooking time", 200, false);
     plotCooking->setRange(0, 500);
     plotCooking->setColor( ofColor(255,255,0) );
@@ -40,6 +56,15 @@ void ofApp::initPlots() {
     plotCooking->setRespectBorders(true);
     plotCooking->setLineWidth(2);
     plotCooking->setBackgroundColor(ofColor(0,0,0,128));
+
+    // compression ratios
+//    plotRatio = new ofxHistoryPlot( NULL, "compression", 200, false);
+//    plotRatio->setRange(0, 5.0);
+//    plotRatio->setColor( ofColor(255,255,255) );
+//    plotRatio->setShowNumericalInfo(true);
+//    plotRatio->setRespectBorders(true);
+//    plotRatio->setLineWidth(2);
+//    plotRatio->setBackgroundColor(ofColor(0,0,0,128));
 }
 
 // ////////////////////////////////////////////////////////////////
@@ -165,6 +190,8 @@ void ofApp::pcAcquire() {
     } // if
 */
 
+    pcCompress();
+
     long ns = ofGetElapsedTimeMillis();
     //ofLogNotice() << "Cooking time in millis " << ns;
     plotCooking->update( ns );
@@ -175,6 +202,18 @@ void ofApp::pcAcquire() {
      * Using the RS data structures straight-up, no copies:
      * Cooking time in millis 50
      */
+}
+
+void ofApp::pcCompress() {
+    std::string compressed;
+    std::string in( reinterpret_cast<char const*>(pcloud.pcdata.vertices), pcloud.pcdata.count*3*sizeof(float));
+
+    //DataEndingAtUnreadablePage i(input);
+    const size_t written = snappy::Compress(in.data(), in.size(), &compressed);
+    //ofLogNotice() << "Original: " << in.size() << " compressed: " << written << " bytes";
+    float ratio = (1.0f * written) / (1.0f * in.size());
+    //ofLogNotice() << "compression: " << ratio; // compression: 0.560411
+    //plotRatio->update( ratio );
 }
 
 // ////////////////////////////////////////////////////////////////
@@ -199,6 +238,6 @@ void ofApp::draw() {
     cam.end();
 
     plotCooking->draw(10, 10, 240, 100);
-//    plotBufferSize->draw(10, 110, 240, 100);
+//    plotRatio->draw(10, 110, 240, 100);
 }
 

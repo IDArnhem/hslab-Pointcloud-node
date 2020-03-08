@@ -28,10 +28,11 @@ void ofxHslabPointcloud::allocate(unsigned long dim) {
     pcdata.vertices = new float[dim*3];
     pcdata.texture = new float[dim*2];
 
-    ofLogNotice() << "Allocating " << pcdata.count << " points in pointcloud";
-    ofLogNotice() << 3*dim*sizeof(unsigned char) << " size of color buffer";
-    ofLogNotice() << 3*dim*sizeof(float) << " size of vertex bufffer";
-    ofLogNotice() << 2*dim*sizeof(float) << " size of texture bufffer";
+    ofLogNotice() << pcdata.count << " points in pointcloud";
+    ofLogNotice() << 3*dim*sizeof(unsigned char) << " bytes for color buffer";
+    ofLogNotice() << 3*dim*sizeof(float) << " bytes for vertex buffer";
+    ofLogNotice() << 2*dim*sizeof(float) << " bytes for texture buffer";
+    ofLogNotice() << ((3*dim*sizeof(unsigned char))+(3*dim*sizeof(float))+(2*dim*sizeof(float))) << " bytes for pointcloud";
 }
 
 // build the pointcloud data structure from RealSense API buffers
