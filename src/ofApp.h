@@ -5,6 +5,7 @@
 #include "ofxHistoryPlot.h"
 #include "ofxhslabpointcloud.h"
 #include "ofxRealsense.h"
+#include "ofxAvahiClient.h"
 #include "snappy.h"
 
 class ofApp : public ofBaseApp {
@@ -12,6 +13,9 @@ public:
     void setup();
     void update();
     void draw();
+    void exit();
+
+    string getHostname();
 
     void initPlots();
 
@@ -43,6 +47,8 @@ private:
 
     ofxHistoryPlot *plotCooking;
     ofxHistoryPlot *plotRatio;
+
+    ofxAvahiClientService mdns;
 
     ofMutex lock;
 };

@@ -24,6 +24,7 @@ Project{
             'ofxRange',
             'ofxHistoryPlot',
             'ofxSnappy',
+            'ofxAvahiClient',
             /* 'ofxSparklines', */
             'ofxAsio-0.9.8' //,
         ]
@@ -31,7 +32,8 @@ Project{
         // additional flags for the project. the of module sets some
         // flags by default to add the core libraries, search paths...
         // this flags can be augmented through the following properties:
-        of.pkgConfigs: []       // list of additional system pkgs to include
+        of.pkgConfigs: [
+        ]       // list of additional system pkgs to include
         of.includePaths: [
             '../../../addons/ofxRealsense/libs/realsense2/include'
         ]     // include search paths
@@ -39,13 +41,19 @@ Project{
         of.cxxFlags: []         // flags passed to the c++ compiler
         of.linkerFlags: [
             '/home/zilog/development/of_v0.10.1_linux64gcc6_release/addons/ofxRealsense/libs/realsense2/lib/linux/librealsense2.so'
+//            '/lib/x86_64-linux-gnu/libsystemd.so'
         ]      // flags passed to the linker
-        of.defines: []          // defines are passed as -D to the compiler
+        of.defines: [
+        ]          // defines are passed as -D to the compiler
                                 // and can be checked with #ifdef or #if in the code
         of.frameworks: []       // osx only, additional frameworks to link with the project
         of.staticLibraries: [
+            'avahi-client',
+            'avahi-common'
         ]  // static libraries
         of.dynamicLibraries: [
+/*            'avahi-client',
+            'avahi-common' */
         ] // dynamic libraries
 
         // other flags can be set through the cpp module: http://doc.qt.io/qbs/cpp-module.html

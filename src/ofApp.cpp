@@ -4,12 +4,27 @@
 //int framecfg[3] = {640, 480, 30}; // width, height, fps
 int framecfg[3] = {640, 360, 30}; // width, height, fps
 
+std::string ofApp::getHostname() {
+    FILE* stream = popen( "hostname", "r" );
+    std::ostringstream output;
+
+    while( !feof( stream ) && !ferror( stream ))
+    {
+        char buf[128];
+        int bytesRead = fread( buf, 1, 128, stream );
+        output.write( buf, bytesRead );
+    }
+    return output.str();
+}
+
 // ////////////////////////////////////////////////////////////////
 void ofApp::setup() {
     ofSetFrameRate(30);
     ofSetVerticalSync(true);
     ofSetLogLevel(OF_LOG_NOTICE);
 
+    std::string h = getHostname();
+    ofLogNotice() << "hostname: " << h;
     initPlots();
 
     acquiring = false;
@@ -45,6 +60,12 @@ void ofApp::setup() {
     } else {
         ofLogWarning() << "No RealSense cameras were found! make sure you have one plugged in";
     }
+
+    mdns.start("HSLAB-RIG pcloud source", "_pcloud._udp", 12001);
+}
+
+void ofApp::exit() {
+    mdns.close();
 }
 
 void ofApp::initPlots() {
